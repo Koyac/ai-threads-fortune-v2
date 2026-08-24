@@ -1,0 +1,56 @@
+# 日次ジョブ: 1日3回 post.py を起動する。
+# 最後のスロット(21:00 JST)のときだけ、続けて collect.py も動かす。
+#
+# 各スロットの15分前に起動し、0〜20分のランダム待機をはさんでから投稿する。
+# こうすると実際の投稿時刻がスロットの前後に散り、機械的な等間隔投稿にならない。
+# post.py 側の「取りこぼし判定」が、GitHub Actions の起動遅れ(混雑時は数分〜十数分)も
+# あわせて吸収する。
+
+name: daily
+
+on:
+  schedule:
+    - cron: '15 22 * * *'   # 07:15 JST (翌日) -> 07:30スロット
+    - cron: '0 3 * * *'     # 12:00 JST        -> 12:15スロット
+    - cron: '45 11 * * *'   # 20:45 JST        -> 21:00スロット
+  workflow_dispatch:        # 手動実行用(セットアップ時の動作確認などに使う)
+
+concurrency:
+  group: daily-post
+  # 実行中のジョブを強制キャンセルすると「投稿は成功したがpushが未完了」の状態のまま
+  # 中断してしまい、二重投稿につながる恐れがある。次の実行は必ず待たせる。
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 依存パッケージをインストール
+        run: pip install -r requirements.txt
+
+      - name: ランダムに待機する(投稿時刻を散らす / 手動実行時はスキップ)
+        if: github.event_name == 'schedule'
+        run: sleep $(( RANDOM % 1200 ))
+
+      - name: 投稿する (post.py)
+        env:
+          THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+          THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python scripts/post.py
+
+      - name: メトリクスを収集する (collect.py / 1日1回だけ)
+        if: github.event_name == 'schedule' && github.event.schedule == '45 11 * * *'
+        env:
+          THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+          THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
+        run: python scripts/collect.py
