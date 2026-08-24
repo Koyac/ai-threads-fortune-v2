@@ -1,3 +1,12 @@
 __pycache__/
 *.pyc
 .DS_Store
+
+# 認証情報をうっかりコミットしないための保険。
+# ローカルで動かすときに使うファイルは、名前が何であれここで弾く。
+.env
+.env.*
+*.env
+secrets*.json
+*token*.txt
+*credential*

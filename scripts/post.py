@@ -228,7 +228,7 @@ def call_with_backoff(func, max_attempts: int = 5):
             # 4xx系は基本的に粘っても無駄なので、そのまま上へ返して呼び出し元に判断させる。
             if exc.code == 429 and not is_daily_quota_error(exc) and minute_quota_waits < 2:
                 minute_quota_waits += 1
-                print(f"[post] Geminiの1分あたりの上限に当たりました。60秒待って再試行します: {exc}")
+                print(f"[post] Geminiの1分あたりの上限に当たりました。60秒待って再試行します: {redact_secrets(exc)}")
                 time.sleep(60)
                 continue
             raise
@@ -236,7 +236,7 @@ def call_with_backoff(func, max_attempts: int = 5):
             if attempt == max_attempts:
                 raise
             wait_seconds = min(2 ** attempt, 30)
-            print(f"[post] Gemini呼び出し失敗(試行{attempt}/{max_attempts}): {exc} -> {wait_seconds}秒後に再試行")
+            print(f"[post] Gemini呼び出し失敗(試行{attempt}/{max_attempts}): {redact_secrets(exc)} -> {wait_seconds}秒後に再試行")
             time.sleep(wait_seconds)
 
 
@@ -536,14 +536,14 @@ def main() -> None:
                 pattern_code, pattern_meaning, recent_hooks, recent_endings, seeds, existing_texts,
             )
         except RuntimeError as exc:
-            print(f"[post] {exc}")
+            print(f"[post] {redact_secrets(exc)}")
             break
         except GeminiClientError as exc:
             # 429(レート制限・無料枠切れ)以外のクライアントエラーは設定ミスの可能性が
             # 高いので、握りつぶさずそのまま落としてActionsを赤くする。
             if exc.code != 429:
                 raise
-            print(f"[post] Gemini APIがレート制限中のため、この実行はここで終了します: {exc}")
+            print(f"[post] Gemini APIがレート制限中のため、この実行はここで終了します: {redact_secrets(exc)}")
             break
         seed = seeds[seed_index]
 
@@ -551,7 +551,7 @@ def main() -> None:
         try:
             media_id = post_to_threads(text, access_token, user_id)
         except ThreadsRateLimited as exc:
-            print(f"[post] Threads APIがレート制限中のため、この実行はここで終了します: {exc}")
+            print(f"[post] Threads APIがレート制限中のため、この実行はここで終了します: {redact_secrets(exc)}")
             break
 
         # --- 7. 記録 ---

@@ -205,7 +205,7 @@ def call_gemini(client: genai.Client, prompt: str, max_attempts: int = 5) -> dic
             is_minute_quota = exc.code == 429 and re.search(r"PerMinute|per minute", str(exc))
             if is_minute_quota and minute_quota_waits < 2:
                 minute_quota_waits += 1
-                print(f"[review] Geminiの1分あたりの上限に当たりました。60秒待って再試行します: {exc}")
+                print(f"[review] Geminiの1分あたりの上限に当たりました。60秒待って再試行します: {redact_secrets(exc)}")
                 time.sleep(60)
                 continue
             raise
@@ -213,7 +213,7 @@ def call_gemini(client: genai.Client, prompt: str, max_attempts: int = 5) -> dic
             if attempt == max_attempts:
                 raise
             wait_seconds = min(2 ** attempt, 30)
-            print(f"[review] Gemini呼び出し失敗(試行{attempt}/{max_attempts}): {exc} -> {wait_seconds}秒後に再試行")
+            print(f"[review] Gemini呼び出し失敗(試行{attempt}/{max_attempts}): {redact_secrets(exc)} -> {wait_seconds}秒後に再試行")
             time.sleep(wait_seconds)
 
 
