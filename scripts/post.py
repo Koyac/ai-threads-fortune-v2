@@ -392,6 +392,14 @@ class ThreadsApiError(Exception):
 
 RATE_LIMIT_ERROR_CODES = {4, 17, 32, 613}
 
+# 「コンテナがまだ見つからない」を表すエラー。作成直後の反映待ちで返ることがある。
+MEDIA_NOT_FOUND_CODE = 24
+MEDIA_NOT_FOUND_SUBCODE = 4279009
+
+# コンテナが公開可能になるまで待つ上限と、確認の間隔(秒)。
+CONTAINER_READY_TIMEOUT = 90
+CONTAINER_POLL_INTERVAL = 3
+
 
 def raise_for_status_without_token(response: requests.Response) -> None:
     """requests標準の raise_for_status とほぼ同じだが、メッセージから認証情報を伏せる。
@@ -421,6 +429,69 @@ def _check_rate_limit(response: requests.Response) -> None:
         raise ThreadsRateLimited(f"レート制限エラー: {redact_secrets(error)}")
 
 
+def _error_body(response: requests.Response) -> dict:
+    """レスポンスから error オブジェクトを取り出す。JSONでなければ空の辞書。"""
+    try:
+        body = response.json()
+    except ValueError:
+        return {}
+    error = body.get("error") if isinstance(body, dict) else None
+    return error if isinstance(error, dict) else {}
+
+
+def _is_media_not_found(response: requests.Response) -> bool:
+    error = _error_body(response)
+    return (
+        error.get("error_subcode") == MEDIA_NOT_FOUND_SUBCODE
+        or error.get("code") == MEDIA_NOT_FOUND_CODE
+    )
+
+
+def wait_for_container_ready(creation_id: str, access_token: str) -> None:
+    """下書きコンテナが公開可能になるまで待つ。
+
+    Threads APIのコンテナ作成は非同期で、作成直後に公開しようとすると
+    「Media Not Found」(code 24 / subcode 4279009)で弾かれることがある。
+    エラーには is_transient: false と入っているが、実際にはタイミング依存の
+    一時的な失敗なので、statusがFINISHEDになるのを待ってから公開する。
+
+    反映前はこのstatus取得自体も同じMedia Not Foundを返すことがあるため、
+    その場合はエラーにせず待ち続ける。
+    """
+    deadline = time.monotonic() + CONTAINER_READY_TIMEOUT
+    last_status = "作成直後"
+
+    while True:
+        resp = requests.get(
+            f"https://graph.threads.net/v1.0/{creation_id}",
+            params={"fields": "status,error_message", "access_token": access_token},
+            timeout=30,
+        )
+        _check_rate_limit(resp)
+
+        if resp.ok:
+            body = resp.json()
+            status = body.get("status")
+            if status == "FINISHED":
+                return
+            if status in ("ERROR", "EXPIRED"):
+                detail = redact_secrets(str(body.get("error_message")))
+                raise ThreadsApiError(f"コンテナが公開できない状態です (status={status}): {detail}")
+            last_status = status or "不明"
+        elif _is_media_not_found(resp):
+            # まだ反映されていないだけ。待って確認し直す。
+            last_status = "未反映"
+        else:
+            raise_for_status_without_token(resp)
+
+        if time.monotonic() >= deadline:
+            raise ThreadsApiError(
+                f"コンテナが{CONTAINER_READY_TIMEOUT}秒以内に公開可能になりませんでした "
+                f"(最後のstatus={last_status})"
+            )
+        time.sleep(CONTAINER_POLL_INTERVAL)
+
+
 def post_to_threads(text: str, access_token: str, user_id: str) -> str:
     """Threads APIの2段階投稿(下書き作成 → 公開)を実行し、公開後のmedia_idを返す。"""
     base = f"https://graph.threads.net/v1.0/{user_id}"
@@ -433,6 +504,9 @@ def post_to_threads(text: str, access_token: str, user_id: str) -> str:
     _check_rate_limit(create_resp)
     raise_for_status_without_token(create_resp)
     creation_id = create_resp.json()["id"]
+
+    # 作成直後は公開できないことがあるので、準備できるまで待つ。
+    wait_for_container_ready(creation_id, access_token)
 
     publish_resp = requests.post(f"{base}/threads_publish", data={
         "creation_id": creation_id,
