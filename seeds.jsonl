@@ -5,7 +5,7 @@
 {"id": "s0005", "pillar": "即実践プロンプト例", "task": "スケジュール調整", "pain": "何を書けばいいか迷う", "used": true}
 {"id": "s0006", "pillar": "即実践プロンプト例", "task": "アイデア出し", "pain": "AIに頼んでも出力が微妙", "used": true}
 {"id": "s0007", "pillar": "即実践プロンプト例", "task": "長文の下書き", "pain": "つい後回しにする", "used": true}
-{"id": "s0008", "pillar": "即実践プロンプト例", "task": "長文の下書き", "pain": "AIに頼んでも出力が微妙", "used": false}
+{"id": "s0008", "pillar": "即実践プロンプト例", "task": "長文の下書き", "pain": "AIに頼んでも出力が微妙", "used": true}
 {"id": "s0009", "pillar": "よくある失敗と改善策", "task": "報告書・日報", "pain": "何を書けばいいか迷う", "used": false}
 {"id": "s0010", "pillar": "よくある失敗と改善策", "task": "チャット/Slackの返信", "pain": "書き出しで止まる", "used": false}
 {"id": "s0011", "pillar": "業務別時短Tips", "task": "アイデア出し", "pain": "AIに頼んでも出力が微妙", "used": false}
