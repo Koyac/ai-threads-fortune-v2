@@ -7,7 +7,7 @@
 {"id": "s0007", "pillar": "即実践プロンプト例", "task": "判断・優先順位づけ", "pain": "抜け漏れ・ミスが出る", "used": false}
 {"id": "s0008", "pillar": "数字で示す効果", "task": "説明・プレゼンの組み立て", "pain": "自分でやると品質がばらつく", "used": false}
 {"id": "s0009", "pillar": "即実践プロンプト例", "task": "競合・市場のリサーチ", "pain": "AIに頼んでも出力が微妙", "used": false}
-{"id": "s0010", "pillar": "よくある失敗と改善策", "task": "長い資料・PDFを読む", "pain": "抜け漏れ・ミスが出る", "used": false}
+{"id": "s0010", "pillar": "よくある失敗と改善策", "task": "長い資料・PDFを読む", "pain": "抜け漏れ・ミスが出る", "used": true}
 {"id": "s0011", "pillar": "数字で示す効果", "task": "メール返信", "pain": "そもそもAIが使えると思っていない", "used": false}
 {"id": "s0012", "pillar": "あるある＋即Tips", "task": "グラフ・数値の読み解き", "pain": "自分でやると品質がばらつく", "used": false}
 {"id": "s0013", "pillar": "あるある＋即Tips", "task": "調べ物の裏取り・事実確認", "pain": "とにかく時間がかかる", "used": false}
