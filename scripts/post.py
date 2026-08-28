@@ -79,6 +79,20 @@ MAX_DEDUP_RETRIES = 3           # 1つの種につき、生成をやり直す回
 MAX_CATCHUP_POSTS_PER_RUN = 1
 MAX_GENERATE_CALLS_PER_RUN = 3
 
+# 発信の柱を巡回させる順番。build_seeds.py の PILLARS と content_prompt.md の
+# 「発信の柱」に一致させること(ズレていると起動時に警告を出す)。
+# 柱ごとに投稿の型が違うので、ここを巡回させることが投稿の単調さを防ぐ生命線になる。
+PILLAR_ROTATION = [
+    "即実践プロンプト例",
+    "あるある＋即Tips",
+    "業務別時短Tips",
+    "数字で示す効果",
+    "よくある失敗と改善策",
+]
+
+# 直近この本数で使った業務シーンは、次の種選びで避ける。
+RECENT_TASK_WINDOW = 4
+
 
 # ============================================================
 # 小さなユーティリティ(jsonlの読み書き・時刻の扱いなど)
@@ -317,11 +331,31 @@ def is_too_similar(text: str, existing_texts: list[str], recent_hooks: list[str]
 # 種の管理(取得・消化済み更新)
 # ============================================================
 
-def find_next_unused_seed_index(seeds: list[dict]) -> int | None:
-    for i, seed in enumerate(seeds):
-        if not seed.get("used"):
-            return i
-    return None
+def find_next_seed_index(seeds: list[dict], posts: list[dict]) -> int | None:
+    """次に使う種を選ぶ。柱を必ず巡回させ、業務シーンの連続も避ける。
+
+    以前は「未使用のうち先頭」を取っていたが、それだと消費順が build_seeds.py の
+    シャッフル結果そのままになり、短い期間で見ると柱が偏る。実際、最初の9投稿は
+    6本が「即実践プロンプト例」に集中し、「あるある＋即Tips」と「数字で示す効果」は
+    一度も使われなかった。柱ごとに投稿の型を変えている以上、この偏りは
+    そのまま「毎回同じような投稿」に直結する。
+
+    そこでA/Bパターンと同じように、投稿数から次の柱を機械的に決める。
+    そのうえで、直近で使った業務シーンとは違うものを優先する。
+    """
+    unused = [i for i, s in enumerate(seeds) if not s.get("used")]
+    if not unused:
+        return None
+
+    wanted_pillar = PILLAR_ROTATION[len(posts) % len(PILLAR_ROTATION)]
+    candidates = [i for i in unused if seeds[i].get("pillar") == wanted_pillar]
+    if not candidates:
+        # その柱の種を使い切っている場合は、柱の制約を外して枯渇を避ける。
+        candidates = unused
+
+    recent_tasks = {p.get("task") for p in posts[-RECENT_TASK_WINDOW:]}
+    fresh = [i for i in candidates if seeds[i].get("task") not in recent_tasks]
+    return (fresh or candidates)[0]
 
 
 class GenerationBudgetExhausted(RuntimeError):
@@ -334,7 +368,7 @@ class GenerationBudgetExhausted(RuntimeError):
 
 
 def generate_unique_post(client, strategy_text, lexicon_text, content_prompt_text, pattern_code, pattern_meaning,
-                          recent_hooks, recent_endings, seeds, existing_texts):
+                          recent_hooks, recent_endings, seeds, existing_texts, posts):
     """種を1つずつ試しながら、重複しない投稿文ができるまで繰り返す。
 
     1つの種につき最大 MAX_DEDUP_RETRIES 回まで生成し直し、それでも似すぎている場合は
@@ -345,7 +379,7 @@ def generate_unique_post(client, strategy_text, lexicon_text, content_prompt_tex
     """
     calls_made = 0
     while True:
-        seed_index = find_next_unused_seed_index(seeds)
+        seed_index = find_next_seed_index(seeds, posts)
         if seed_index is None:
             raise RuntimeError("未使用の種(seed)がもうありません。build_seeds.py の再実行を検討してください。")
         seed = seeds[seed_index]
@@ -575,6 +609,11 @@ def main() -> None:
         print("[post] seeds.jsonl が空です。先に build_seeds.py を実行してください。", file=sys.stderr)
         sys.exit(1)
 
+    # 柱名がズレていると巡回が空振りし、また同じ柱ばかりになる。早い段階で気づけるようにする。
+    unknown = {s.get("pillar") for s in seeds} - set(PILLAR_ROTATION)
+    if unknown:
+        print(f"[post] 警告: PILLAR_ROTATION に無い柱が種にあります: {sorted(unknown)}", file=sys.stderr)
+
     # --- 1. 取りこぼし判定 ---
     due_slots = [
         window["label"]
@@ -611,6 +650,7 @@ def main() -> None:
             seed_index, text = generate_unique_post(
                 client, strategy_text, lexicon_text, content_prompt_text,
                 pattern_code, pattern_meaning, recent_hooks, recent_endings, seeds, existing_texts,
+                posts,
             )
         except RuntimeError as exc:
             print(f"[post] {redact_secrets(exc)}")
