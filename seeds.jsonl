@@ -21,7 +21,7 @@
 {"id": "s0021", "pillar": "AIツール紹介", "task": "考えの整理・壁打ち", "pain": "抜け漏れ・ミスが出る", "used": false}
 {"id": "s0022", "pillar": "よくある失敗と改善策", "task": "問い合わせ・クレーム対応", "pain": "そもそもAIが使えると思っていない", "used": false}
 {"id": "s0023", "pillar": "即実践プロンプト例", "task": "報告書・日報", "pain": "自分でやると品質がばらつく", "used": false}
-{"id": "s0024", "pillar": "数字で示す効果", "task": "メール返信", "pain": "とにかく時間がかかる", "used": false}
+{"id": "s0024", "pillar": "数字で示す効果", "task": "メール返信", "pain": "とにかく時間がかかる", "used": true}
 {"id": "s0025", "pillar": "即実践プロンプト例", "task": "スケジュール調整", "pain": "AIに頼んでも出力が微妙", "used": false}
 {"id": "s0026", "pillar": "よくある失敗と改善策", "task": "報告書・日報", "pain": "抜け漏れ・ミスが出る", "used": false}
 {"id": "s0027", "pillar": "数字で示す効果", "task": "企画書・提案書", "pain": "AIに頼んでも出力が微妙", "used": false}
