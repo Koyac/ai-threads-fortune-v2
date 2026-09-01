@@ -31,7 +31,7 @@
 {"id": "s0031", "pillar": "よくある失敗と改善策", "task": "会議の準備・想定問答", "pain": "何から手をつけるか分からない", "used": false}
 {"id": "s0032", "pillar": "即実践プロンプト例", "task": "アイデア出し", "pain": "AIに頼んでも出力が微妙", "used": true, "skipped": true}
 {"id": "s0033", "pillar": "AIの落とし穴と対処", "task": "学習・スキルアップ", "pain": "何から手をつけるか分からない", "used": false}
-{"id": "s0034", "pillar": "あるある＋即Tips", "task": "英語のメール・翻訳", "pain": "そもそもAIが使えると思っていない", "used": false}
+{"id": "s0034", "pillar": "あるある＋即Tips", "task": "英語のメール・翻訳", "pain": "そもそもAIが使えると思っていない", "used": true}
 {"id": "s0035", "pillar": "AIの落とし穴と対処", "task": "数字・データの整理", "pain": "とにかく時間がかかる", "used": false}
 {"id": "s0036", "pillar": "即実践プロンプト例", "task": "説明・プレゼンの組み立て", "pain": "つい後回しにする", "used": false}
 {"id": "s0037", "pillar": "即実践プロンプト例", "task": "数字・データの整理", "pain": "つい後回しにする", "used": false}
