@@ -18,7 +18,7 @@
 {"id": "s0018", "pillar": "AIツール紹介", "task": "Excel・スプレッドシートの関数", "pain": "抜け漏れ・ミスが出る", "used": true}
 {"id": "s0019", "pillar": "AIの落とし穴と対処", "task": "競合・市場のリサーチ", "pain": "つい後回しにする", "used": false}
 {"id": "s0020", "pillar": "よくある失敗と改善策", "task": "問い合わせ・クレーム対応", "pain": "抜け漏れ・ミスが出る", "used": false}
-{"id": "s0021", "pillar": "AIツール紹介", "task": "考えの整理・壁打ち", "pain": "抜け漏れ・ミスが出る", "used": false}
+{"id": "s0021", "pillar": "AIツール紹介", "task": "考えの整理・壁打ち", "pain": "抜け漏れ・ミスが出る", "used": true}
 {"id": "s0022", "pillar": "よくある失敗と改善策", "task": "問い合わせ・クレーム対応", "pain": "そもそもAIが使えると思っていない", "used": false}
 {"id": "s0023", "pillar": "即実践プロンプト例", "task": "報告書・日報", "pain": "自分でやると品質がばらつく", "used": false}
 {"id": "s0024", "pillar": "数字で示す効果", "task": "メール返信", "pain": "とにかく時間がかかる", "used": true}
