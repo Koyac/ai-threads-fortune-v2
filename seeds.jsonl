@@ -14,7 +14,7 @@
 {"id": "s0014", "pillar": "AIの落とし穴と対処", "task": "学習・スキルアップ", "pain": "自分でやると品質がばらつく", "used": true}
 {"id": "s0015", "pillar": "よくある失敗と改善策", "task": "競合・市場のリサーチ", "pain": "とにかく時間がかかる", "used": false}
 {"id": "s0016", "pillar": "即実践プロンプト例", "task": "情報収集・記事の要約", "pain": "自分でやると品質がばらつく", "used": false}
-{"id": "s0017", "pillar": "AIの落とし穴と対処", "task": "アイデア出し", "pain": "つい後回しにする", "used": false}
+{"id": "s0017", "pillar": "AIの落とし穴と対処", "task": "アイデア出し", "pain": "つい後回しにする", "used": true}
 {"id": "s0018", "pillar": "AIツール紹介", "task": "Excel・スプレッドシートの関数", "pain": "抜け漏れ・ミスが出る", "used": true}
 {"id": "s0019", "pillar": "AIの落とし穴と対処", "task": "競合・市場のリサーチ", "pain": "つい後回しにする", "used": false}
 {"id": "s0020", "pillar": "よくある失敗と改善策", "task": "問い合わせ・クレーム対応", "pain": "抜け漏れ・ミスが出る", "used": false}
