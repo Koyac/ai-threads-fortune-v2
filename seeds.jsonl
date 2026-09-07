@@ -47,7 +47,7 @@
 {"id": "s0047", "pillar": "よくある失敗と改善策", "task": "スケジュール調整", "pain": "AIに頼んでも出力が微妙", "used": false}
 {"id": "s0048", "pillar": "即実践プロンプト例", "task": "チャット/Slackの返信", "pain": "とにかく時間がかかる", "used": false}
 {"id": "s0049", "pillar": "業務別時短Tips", "task": "長い資料・PDFを読む", "pain": "抜け漏れ・ミスが出る", "used": false}
-{"id": "s0050", "pillar": "あるある＋即Tips", "task": "問い合わせ・クレーム対応", "pain": "何から手をつけるか分からない", "used": false}
+{"id": "s0050", "pillar": "あるある＋即Tips", "task": "問い合わせ・クレーム対応", "pain": "何から手をつけるか分からない", "used": true}
 {"id": "s0051", "pillar": "数字で示す効果", "task": "説明・プレゼンの組み立て", "pain": "自分でやると品質がばらつく", "used": false}
 {"id": "s0052", "pillar": "数字で示す効果", "task": "数字・データの整理", "pain": "自分でやると品質がばらつく", "used": false}
 {"id": "s0053", "pillar": "業務別時短Tips", "task": "手順書・マニュアル作成", "pain": "何から手をつけるか分からない", "used": false}
