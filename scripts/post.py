@@ -79,25 +79,10 @@ MAX_DEDUP_RETRIES = 3           # 1つの種につき、生成をやり直す回
 MAX_CATCHUP_POSTS_PER_RUN = 1
 MAX_GENERATE_CALLS_PER_RUN = 3
 
-# 発信の柱を巡回させる順番。build_seeds.py の PILLARS と content_prompt.md の
-# 「発信の柱」に一致させること(ズレていると起動時に警告を出す)。
-# 柱ごとに投稿の型が違うので、ここを巡回させることが投稿の単調さを防ぐ生命線になる。
-#
-# プロンプトを本文に載せる柱(即実践プロンプト例・よくある失敗と改善策)が連続しないよう、
-# 載せない柱を間に挟む順番にしている。プロンプトが毎回並ぶと、内容が違っても
-# 「プロンプト集」に見えてしまうため。
-PILLAR_ROTATION = [
-    "即実践プロンプト例",      # プロンプトを載せる
-    "AIツール紹介",           # 載せない
-    "あるある＋即Tips",        # 載せない
-    "よくある失敗と改善策",      # プロンプトを載せる
-    "AIの落とし穴と対処",       # 載せない
-    "業務別時短Tips",         # 載せない
-    "数字で示す効果",          # 載せない
-]
-
-# 直近この本数で使った業務シーンは、次の種選びで避ける。
-RECENT_TASK_WINDOW = 4
+# 話数の役割。build_seeds.py の EPISODES と content_prompt.md の「話数の型」に
+# 一致させること(ズレていると起動時に警告を出す)。
+# 種は連載の順に並んでいるので、ここは巡回用ではなく整合性チェック用。
+EPISODE_ROLES = ["着手", "つまずき", "解決", "結果"]
 
 
 # ============================================================
@@ -261,12 +246,35 @@ def call_with_backoff(func, max_attempts: int = 5):
 
 
 def build_prompt(strategy_text, lexicon_text, content_prompt_text, seed, pattern_code, pattern_meaning,
-                  recent_hooks, recent_endings) -> str:
+                  recent_hooks, recent_endings, arc_posts=None) -> str:
     hooks_block = "\n".join(f"- {hook}" for hook in recent_hooks) if recent_hooks else "(まだ実績なし)"
     endings_block = "、".join(recent_endings) if recent_endings else "(まだ実績なし)"
 
+    # 同じ連載の前の話を、本文まるごと渡す。要約にすると細部が失われて
+    # 「前回こう書いた」と噛み合わない話になるため、そのまま渡している。
+    if arc_posts:
+        prev = "\n\n".join(
+            f"── 第{p.get('episode')}話（{p.get('pillar')}）\n{p['text']}" for p in arc_posts
+        )
+        arc_block = f"""
+# この連載のこれまでの話（続きとして書くこと。矛盾させない）
+
+{prev}
+
+**前の話で書いたことを繰り返さないこと。** 読者は前の話を読んでいる前提で、続きから書く。
+"""
+    else:
+        arc_block = """
+# この連載の第1話です
+
+まだ前の話はありません。これから何に取り組むかを宣言する回として書く。
+"""
+
     return f"""あなたはThreadsで「{ACCOUNT_CONCEPT}」アカウントを運用している、{PERSONA}です。
 以下の情報だけを元に、Threadsに投稿する本文を1つ書いてください。
+
+これは**連載**です。1つの業務をAIで片づけるまでを数話に分けて書いています。
+今回はその{seed.get("episode")}話目にあたります。
 
 # アカウントの生成方針・フォーマット詳細 (content_prompt.md)
 {content_prompt_text}
@@ -277,11 +285,17 @@ def build_prompt(strategy_text, lexicon_text, content_prompt_text, seed, pattern
 # 使ってよい語彙・禁止表現 (lexicon.md)
 {lexicon_text}
 
-# 今回のお題(この3つの掛け合わせで書くこと。話を広げず、この1点に絞る)
-- 軸1(発信の柱): {seed["pillar"]}
-- 軸2(業務シーン): {seed["task"]}
-- 軸3(読者が詰まっているポイント): {seed["pain"]}
+# この連載のテーマ
+- 題材(業務): {seed["task"]}
+- 何が面倒か: {seed["pain"]}
 
+# 今回の話数: 第{seed.get("episode")}話 / 全{seed.get("arc_total")}話 「{seed["pillar"]}」
+
+{seed.get("goal", "")}
+
+**この話数の役割から外れないこと。** 解決回でないのに解決策を全部書いてしまうと、
+連載が1話で終わって続きを読む理由が消える。
+{arc_block}
 # 今回のパターン: {pattern_code}（{pattern_meaning}）
 
 # 直近{len(recent_hooks)}投稿のフック(1行目)。これらと同じ・似た書き出しは禁止
@@ -293,11 +307,11 @@ def build_prompt(strategy_text, lexicon_text, content_prompt_text, seed, pattern
 # 出力ルール
 - strategy.md の「固定ルール」セクションを必ず守ること
 - content_prompt.md のルールを必ず守ること
-- 本文は150〜400文字。数えて超えていたら削ってから出力すること
-- Tipsは1つだけ。2つ目を思いついても書かないこと
-- content_prompt.md の「具体性の絶対条件」4つと「出力前の自己チェック」5項目を必ず通すこと
-- 特に、どこに打ち込むかを書くこと・カギカッコの中だけでそのまま動くプロンプト全文を書くこと
+- 本文は100〜250文字。「解決」の回だけプロンプト全文のため350文字まで可
+- 扱うのは1つだけ。2つ目を思いついても書かないこと
+- content_prompt.md の「具体性の絶対条件」と「出力前の自己チェック」を必ず通すこと
 - ツールは原則限定しない。特定ツール固有の機能を使うときだけ名指しすること
+- 「第◯話」という表記は本文に書かない。読めば続きものだと分かるように書く
 - 出力は投稿本文のみ。前置き・説明・引用符・見出しは一切つけないこと
 """
 
@@ -338,30 +352,27 @@ def is_too_similar(text: str, existing_texts: list[str], recent_hooks: list[str]
 # ============================================================
 
 def find_next_seed_index(seeds: list[dict], posts: list[dict]) -> int | None:
-    """次に使う種を選ぶ。柱を必ず巡回させ、業務シーンの連続も避ける。
+    """次に使う種を選ぶ。連載なので、必ず先頭から順に消費する。
 
-    以前は「未使用のうち先頭」を取っていたが、それだと消費順が build_seeds.py の
-    シャッフル結果そのままになり、短い期間で見ると柱が偏る。実際、最初の9投稿は
-    6本が「即実践プロンプト例」に集中し、「あるある＋即Tips」と「数字で示す効果」は
-    一度も使われなかった。柱ごとに投稿の型を変えている以上、この偏りは
-    そのまま「毎回同じような投稿」に直結する。
-
-    そこでA/Bパターンと同じように、投稿数から次の柱を機械的に決める。
-    そのうえで、直近で使った業務シーンとは違うものを優先する。
+    以前は柱を巡回させて種を選んでいたが、連載型に変えたため順序の入れ替えはできない。
+    2話目(つまずき)より先に3話目(解決)が出てしまうと連載として成立しない。
+    build_seeds.py が話数の順に並べているので、ここでは並びをそのまま尊重する。
     """
-    unused = [i for i, s in enumerate(seeds) if not s.get("used")]
-    if not unused:
-        return None
+    for i, seed in enumerate(seeds):
+        if not seed.get("used"):
+            return i
+    return None
 
-    wanted_pillar = PILLAR_ROTATION[len(posts) % len(PILLAR_ROTATION)]
-    candidates = [i for i in unused if seeds[i].get("pillar") == wanted_pillar]
-    if not candidates:
-        # その柱の種を使い切っている場合は、柱の制約を外して枯渇を避ける。
-        candidates = unused
 
-    recent_tasks = {p.get("task") for p in posts[-RECENT_TASK_WINDOW:]}
-    fresh = [i for i in candidates if seeds[i].get("task") not in recent_tasks]
-    return (fresh or candidates)[0]
+def collect_arc_context(posts: list[dict], arc_no) -> list[dict]:
+    """同じ連載の、これまでの話を古い順に返す。
+
+    連載として読ませるには、前の話に何を書いたかを生成時に渡す必要がある。
+    ここが無いと、話数だけ振られた独立したTipsになってしまう。
+    """
+    if arc_no is None:
+        return []
+    return [p for p in posts if p.get("arc_no") == arc_no and p.get("text")]
 
 
 class GenerationBudgetExhausted(RuntimeError):
@@ -389,6 +400,7 @@ def generate_unique_post(client, strategy_text, lexicon_text, content_prompt_tex
         if seed_index is None:
             raise RuntimeError("未使用の種(seed)がもうありません。build_seeds.py の再実行を検討してください。")
         seed = seeds[seed_index]
+        arc_posts = collect_arc_context(posts, seed.get("arc_no"))
 
         exhausted_this_seed = False
         for attempt in range(1, MAX_DEDUP_RETRIES + 1):
@@ -397,7 +409,8 @@ def generate_unique_post(client, strategy_text, lexicon_text, content_prompt_tex
                     f"この実行での生成回数の上限({MAX_GENERATE_CALLS_PER_RUN}回)に達しました。"
                 )
             prompt = build_prompt(strategy_text, lexicon_text, content_prompt_text, seed,
-                                   pattern_code, pattern_meaning, recent_hooks, recent_endings)
+                                   pattern_code, pattern_meaning, recent_hooks, recent_endings,
+                                   arc_posts)
             text = generate_post_text(client, prompt)
             calls_made += 1
             too_similar, reason = is_too_similar(text, existing_texts, recent_hooks)
@@ -616,9 +629,9 @@ def main() -> None:
         sys.exit(1)
 
     # 柱名がズレていると巡回が空振りし、また同じ柱ばかりになる。早い段階で気づけるようにする。
-    unknown = {s.get("pillar") for s in seeds} - set(PILLAR_ROTATION)
+    unknown = {s.get("pillar") for s in seeds} - set(EPISODE_ROLES)
     if unknown:
-        print(f"[post] 警告: PILLAR_ROTATION に無い柱が種にあります: {sorted(unknown)}", file=sys.stderr)
+        print(f"[post] 警告: EPISODE_ROLES に無い話数の役割が種にあります: {sorted(unknown)}", file=sys.stderr)
 
     # --- 1. 取りこぼし判定 ---
     due_slots = [
@@ -687,6 +700,8 @@ def main() -> None:
             "seed_id": seed["id"],
             "pattern": pattern_code,
             "pattern_meaning": pattern_meaning,
+            "arc_no": seed.get("arc_no"),
+            "episode": seed.get("episode"),
             "pillar": seed["pillar"],
             "task": seed["task"],
             "pain": seed["pain"],
